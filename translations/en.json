@@ -1,0 +1,140 @@
+{
+  "title": "Device Availability Monitor",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Core Monitoring",
+        "description": "Step 1 of 3. Choose which device domains to monitor and define the offline escalation thresholds.",
+        "data": {
+          "tracked_domains": "Tracked domains",
+          "warning_threshold": "Warning threshold",
+          "critical_threshold": "Critical threshold",
+          "treat_unknown_as_offline": "Treat unknown as offline"
+        },
+        "data_description": {
+          "tracked_domains": "Keep real device domains such as lights, switches, and covers first. On large systems, avoid enabling every sensor-like domain on the first run.",
+          "warning_threshold": "A device becomes warning after being offline for at least this many seconds.",
+          "critical_threshold": "A device becomes critical after being offline for at least this many seconds. Must be greater than or equal to the warning threshold.",
+          "treat_unknown_as_offline": "When enabled, unknown is treated as offline. Disabled by default to reduce false positives."
+        }
+      },
+      "exclusions": {
+        "title": "Exclusions",
+        "description": "Step 2 of 3. Exclude domains, integrations, devices, or entities that should not participate in monitoring.",
+        "data": {
+          "exclude_domains": "Excluded domains",
+          "exclude_integrations": "Excluded integrations",
+          "exclude_devices": "Excluded devices",
+          "exclude_entities": "Excluded entities"
+        },
+        "data_description": {
+          "exclude_domains": "Exclude an entire entity domain, for example if no sensor entities should participate.",
+          "exclude_integrations": "Exclude a whole integration, such as mqtt, zha, or esphome.",
+          "exclude_devices": "Exclude by device. The whole selected device will be ignored by offline monitoring.",
+          "exclude_entities": "Exclude specific entities only. Useful for noisy or unstable auxiliary entities."
+        }
+      },
+      "advanced": {
+        "title": "Advanced Settings",
+        "description": "Step 3 of 3. These options only affect UI refresh behavior, battery thresholds, and recovered metadata retention. They do not poll devices.",
+        "data": {
+          "ui_refresh_interval": "UI refresh interval",
+          "cleanup_orphan_after_hours": "Orphan metadata retention",
+          "low_battery_threshold": "Low battery threshold",
+          "treat_battery_unavailable_unknown_as_low": "Treat unavailable or unknown battery as low"
+        },
+        "data_description": {
+          "ui_refresh_interval": "Used only to refresh offline duration and severity display, in seconds.",
+          "cleanup_orphan_after_hours": "How many hours to retain recovered metadata for devices that no longer exist in the registry.",
+          "low_battery_threshold": "Devices with battery levels below this percentage are added to the low battery list.",
+          "treat_battery_unavailable_unknown_as_low": "When enabled, battery entities that are unavailable or unknown are treated as 0% and counted as low battery. Disable it to filter them out."
+        }
+      }
+    },
+    "error": {
+      "threshold_order": "The critical threshold must be greater than or equal to the warning threshold.",
+      "no_domains": "At least one tracked domain must be selected."
+    },
+    "abort": {
+      "already_configured": "This integration has already been configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Core Monitoring",
+        "description": "Step 1 of 3. Update the monitored domains and the offline detection rules.",
+        "data": {
+          "tracked_domains": "Tracked domains",
+          "warning_threshold": "Warning threshold",
+          "critical_threshold": "Critical threshold",
+          "treat_unknown_as_offline": "Treat unknown as offline"
+        },
+        "data_description": {
+          "tracked_domains": "This controls which entity domains participate in device offline monitoring. The more you enable, the heavier the first scan becomes.",
+          "warning_threshold": "A device becomes warning after being offline for at least this many seconds.",
+          "critical_threshold": "A device becomes critical after being offline for at least this many seconds. Must be greater than or equal to the warning threshold.",
+          "treat_unknown_as_offline": "When enabled, unknown is treated as offline. Disabled by default to reduce false positives."
+        }
+      },
+      "exclusions": {
+        "title": "Exclusions",
+        "description": "Step 2 of 3. Exclude domains, integrations, devices, or entities that should not participate in monitoring.",
+        "data": {
+          "exclude_domains": "Excluded domains",
+          "exclude_integrations": "Excluded integrations",
+          "exclude_devices": "Excluded devices",
+          "exclude_entities": "Excluded entities"
+        },
+        "data_description": {
+          "exclude_domains": "Exclude an entire entity domain, for example if no sensor entities should participate.",
+          "exclude_integrations": "Exclude a whole integration, such as mqtt, zha, or esphome.",
+          "exclude_devices": "Exclude by device. The whole selected device will be ignored by offline monitoring.",
+          "exclude_entities": "Exclude specific entities only. Useful for noisy or unstable auxiliary entities."
+        }
+      },
+      "advanced": {
+        "title": "Advanced Settings",
+        "description": "Step 3 of 3. These options only affect display refresh behavior, battery thresholds, and recovered metadata retention. They do not poll devices.",
+        "data": {
+          "ui_refresh_interval": "UI refresh interval",
+          "cleanup_orphan_after_hours": "Orphan metadata retention",
+          "low_battery_threshold": "Low battery threshold",
+          "treat_battery_unavailable_unknown_as_low": "Treat unavailable or unknown battery as low"
+        },
+        "data_description": {
+          "ui_refresh_interval": "Used only to refresh offline duration and severity display, in seconds.",
+          "cleanup_orphan_after_hours": "How many hours to retain recovered metadata for devices that no longer exist in the registry.",
+          "low_battery_threshold": "Devices with battery levels below this percentage are added to the low battery list.",
+          "treat_battery_unavailable_unknown_as_low": "When enabled, battery entities that are unavailable or unknown are treated as 0% and counted as low battery. Disable it to filter them out."
+        }
+      }
+    },
+    "error": {
+      "threshold_order": "The critical threshold must be greater than or equal to the warning threshold.",
+      "no_domains": "At least one tracked domain must be selected."
+    }
+  },
+  "services": {
+      "reset_stats": {
+        "name": "Reset statistics",
+        "description": "Rebuild indexes and recalculate offline and low battery records from the current Home Assistant state."
+      }
+    },
+  "entity": {
+    "sensor": {
+      "unavailable_devices_list": {
+        "name": "Unavailable devices list"
+      },
+      "unavailable_by_integration": {
+        "name": "Unavailable devices by integration"
+      },
+      "critical_offline_devices": {
+        "name": "Critical offline devices"
+      },
+      "low_battery_devices_list": {
+        "name": "Low battery devices list"
+      }
+    }
+  }
+}

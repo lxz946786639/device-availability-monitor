@@ -1,0 +1,140 @@
+{
+  "title": "设备可用性监控",
+  "config": {
+    "step": {
+      "user": {
+        "title": "基础监控设置",
+        "description": "第 1 步，共 3 步。先确定要监控的设备范围，以及离线告警升级规则。",
+        "data": {
+          "tracked_domains": "监控的实体域",
+          "warning_threshold": "告警阈值",
+          "critical_threshold": "严重阈值",
+          "treat_unknown_as_offline": "将 unknown 视为离线"
+        },
+        "data_description": {
+          "tracked_domains": "建议优先保留灯、开关、窗帘等设备域；大规模系统首次使用时，不建议一开始就全选 sensor 类域。",
+          "warning_threshold": "设备连续离线达到该秒数后，标记为 warning。",
+          "critical_threshold": "设备连续离线达到该秒数后，升级为 critical；必须大于或等于告警阈值。",
+          "treat_unknown_as_offline": "开启后，unknown 也会被视为离线。默认关闭以减少误判。"
+        }
+      },
+      "exclusions": {
+        "title": "排除项",
+        "description": "第 2 步，共 3 步。按 domain、集成、设备或实体排除不希望参与统计的对象。",
+        "data": {
+          "exclude_domains": "排除的实体域",
+          "exclude_integrations": "排除的集成",
+          "exclude_devices": "排除的设备",
+          "exclude_entities": "排除的实体"
+        },
+        "data_description": {
+          "exclude_domains": "排除整个实体域，例如不希望 sensor 全部参与时可在这里设置。",
+          "exclude_integrations": "排除某个完整集成，例如 mqtt、zha、esphome。",
+          "exclude_devices": "按设备排除。被选中的整个设备都不会进入离线统计。",
+          "exclude_entities": "只排除指定实体，适合过滤某些噪声实体或状态不稳定的附属实体。"
+        }
+      },
+      "advanced": {
+        "title": "高级设置",
+        "description": "第 3 步，共 3 步。这里只调整界面刷新、电量阈值和恢复元数据保留时间，不会主动轮询设备。",
+        "data": {
+          "ui_refresh_interval": "界面刷新间隔",
+          "cleanup_orphan_after_hours": "孤立元数据清理时间",
+          "low_battery_threshold": "低电量阈值",
+          "treat_battery_unavailable_unknown_as_low": "电量异常按低电量处理"
+        },
+        "data_description": {
+          "ui_refresh_interval": "仅用于刷新离线时长和告警等级显示，单位为秒。",
+          "cleanup_orphan_after_hours": "已不存在于 registry 的恢复记录，最多保留多少小时后清理。",
+          "low_battery_threshold": "低于该百分比的设备会进入低电量列表。",
+          "treat_battery_unavailable_unknown_as_low": "开启后，电量实体处于 unavailable 或 unknown 时按 0% 处理并计入低电量；关闭后会忽略这类设备。"
+        }
+      }
+    },
+    "error": {
+      "threshold_order": "严重阈值必须大于或等于告警阈值。",
+      "no_domains": "至少需要选择一个监控的实体域。"
+    },
+    "abort": {
+      "already_configured": "该集成已经配置过。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "基础监控设置",
+        "description": "第 1 步，共 3 步。先调整监控范围和离线判定规则。",
+        "data": {
+          "tracked_domains": "监控的实体域",
+          "warning_threshold": "告警阈值",
+          "critical_threshold": "严重阈值",
+          "treat_unknown_as_offline": "将 unknown 视为离线"
+        },
+        "data_description": {
+          "tracked_domains": "这里决定哪些实体域会参与设备离线统计；选得越多，首次扫描压力越大。",
+          "warning_threshold": "设备连续离线达到该秒数后，标记为 warning。",
+          "critical_threshold": "设备连续离线达到该秒数后，升级为 critical；必须大于或等于告警阈值。",
+          "treat_unknown_as_offline": "开启后，unknown 也会被视为离线。默认关闭以减少误判。"
+        }
+      },
+      "exclusions": {
+        "title": "排除项",
+        "description": "第 2 步，共 3 步。按 domain、集成、设备或实体排除不希望参与统计的对象。",
+        "data": {
+          "exclude_domains": "排除的实体域",
+          "exclude_integrations": "排除的集成",
+          "exclude_devices": "排除的设备",
+          "exclude_entities": "排除的实体"
+        },
+        "data_description": {
+          "exclude_domains": "排除整个实体域，例如不希望 sensor 全部参与时可在这里设置。",
+          "exclude_integrations": "排除某个完整集成，例如 mqtt、zha、esphome。",
+          "exclude_devices": "按设备排除。被选中的整个设备都不会进入离线统计。",
+          "exclude_entities": "只排除指定实体，适合过滤某些噪声实体或状态不稳定的附属实体。"
+        }
+      },
+      "advanced": {
+        "title": "高级设置",
+        "description": "第 3 步，共 3 步。这里只调整显示刷新、电量阈值和恢复元数据保留时间，不会主动轮询设备。",
+        "data": {
+          "ui_refresh_interval": "界面刷新间隔",
+          "cleanup_orphan_after_hours": "孤立元数据清理时间",
+          "low_battery_threshold": "低电量阈值",
+          "treat_battery_unavailable_unknown_as_low": "电量异常按低电量处理"
+        },
+        "data_description": {
+          "ui_refresh_interval": "仅用于刷新离线时长和告警等级显示，单位为秒。",
+          "cleanup_orphan_after_hours": "已不存在于 registry 的恢复记录，最多保留多少小时后清理。",
+          "low_battery_threshold": "低于该百分比的设备会进入低电量列表。",
+          "treat_battery_unavailable_unknown_as_low": "开启后，电量实体处于 unavailable 或 unknown 时按 0% 处理并计入低电量；关闭后会忽略这类设备。"
+        }
+      }
+    },
+    "error": {
+      "threshold_order": "严重阈值必须大于或等于告警阈值。",
+      "no_domains": "至少需要选择一个监控的实体域。"
+    }
+  },
+  "services": {
+      "reset_stats": {
+        "name": "重置统计",
+        "description": "重建索引，并基于当前 Home Assistant 状态重新计算离线和低电量记录。"
+      }
+    },
+  "entity": {
+    "sensor": {
+      "unavailable_devices_list": {
+        "name": "不可用设备列表"
+      },
+      "unavailable_by_integration": {
+        "name": "按集成统计不可用设备"
+      },
+      "critical_offline_devices": {
+        "name": "严重离线设备"
+      },
+      "low_battery_devices_list": {
+        "name": "低电量设备列表"
+      }
+    }
+  }
+}
