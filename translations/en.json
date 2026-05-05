@@ -6,12 +6,14 @@
         "title": "Core Monitoring",
         "description": "Step 1 of 3. Choose which device domains to monitor and define the offline escalation thresholds.",
         "data": {
+          "offline_strategy": "Offline strategy",
           "tracked_domains": "Tracked domains",
           "warning_threshold": "Warning threshold",
           "critical_threshold": "Critical threshold",
           "treat_unknown_as_offline": "Treat unknown as offline"
         },
         "data_description": {
+          "offline_strategy": "Choose how device offline status is determined. Core mode only counts core device domains to reduce false positives.",
           "tracked_domains": "Keep real device domains such as lights, switches, and covers first. On large systems, avoid enabling every sensor-like domain on the first run.",
           "warning_threshold": "A device becomes warning after being offline for at least this many seconds.",
           "critical_threshold": "A device becomes critical after being offline for at least this many seconds. Must be greater than or equal to the warning threshold.",
@@ -65,12 +67,14 @@
         "title": "Core Monitoring",
         "description": "Step 1 of 3. Update the monitored domains and the offline detection rules.",
         "data": {
+          "offline_strategy": "Offline strategy",
           "tracked_domains": "Tracked domains",
           "warning_threshold": "Warning threshold",
           "critical_threshold": "Critical threshold",
           "treat_unknown_as_offline": "Treat unknown as offline"
         },
         "data_description": {
+          "offline_strategy": "Choose how device offline status is determined. Core mode only counts core device domains to reduce false positives.",
           "tracked_domains": "This controls which entity domains participate in device offline monitoring. The more you enable, the heavier the first scan becomes.",
           "warning_threshold": "A device becomes warning after being offline for at least this many seconds.",
           "critical_threshold": "A device becomes critical after being offline for at least this many seconds. Must be greater than or equal to the warning threshold.",
@@ -134,6 +138,12 @@
       },
       "low_battery_devices_list": {
         "name": "Low battery devices list"
+      },
+      "degraded_devices_list": {
+        "name": "Degraded devices list"
+      },
+      "flapping_devices_list": {
+        "name": "Flapping devices list"
       }
     }
   }

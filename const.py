@@ -27,6 +27,7 @@ CONF_EXCLUDE_DEVICES = "exclude_devices"
 CONF_EXCLUDE_ENTITIES = "exclude_entities"
 CONF_EXCLUDE_INTEGRATIONS = "exclude_integrations"
 CONF_EXCLUDE_DOMAINS = "exclude_domains"
+CONF_OFFLINE_STRATEGY = "offline_strategy"
 CONF_UI_REFRESH_INTERVAL = "ui_refresh_interval"
 CONF_CLEANUP_ORPHAN_AFTER_HOURS = "cleanup_orphan_after_hours"
 CONF_LOW_BATTERY_THRESHOLD = "low_battery_threshold"
@@ -36,11 +37,18 @@ CONF_TREAT_BATTERY_UNAVAILABLE_UNKNOWN_AS_LOW = (
 
 DEFAULT_WARNING_THRESHOLD = 60
 DEFAULT_CRITICAL_THRESHOLD = 600
+DEFAULT_OFFLINE_STRATEGY = "core"
 DEFAULT_TREAT_UNKNOWN_AS_OFFLINE = False
 DEFAULT_UI_REFRESH_INTERVAL = 60
 DEFAULT_CLEANUP_ORPHAN_AFTER_HOURS = 24
 DEFAULT_LOW_BATTERY_THRESHOLD = 20
 DEFAULT_TREAT_BATTERY_UNAVAILABLE_UNKNOWN_AS_LOW = True
+
+OFFLINE_STRATEGIES: tuple[str, ...] = ("any", "core", "quorum")
+STORAGE_VERSION = 1
+STORAGE_SAVE_DELAY_SECONDS = 1.0
+MAX_FLAP_HISTORY_ENTRIES = 20
+MAX_PENDING_EVENTS = 2000
 
 DEFAULT_TRACKED_DOMAINS: tuple[str, ...] = (
     "light",
@@ -53,6 +61,21 @@ DEFAULT_TRACKED_DOMAINS: tuple[str, ...] = (
     "humidifier",
     "water_heater",
     "vacuum",
+)
+
+CORE_OFFLINE_DOMAINS: frozenset[str] = frozenset(
+    {
+        "light",
+        "switch",
+        "cover",
+        "fan",
+        "climate",
+        "lock",
+        "media_player",
+        "humidifier",
+        "water_heater",
+        "vacuum",
+    }
 )
 
 SUPPORTED_TRACKED_DOMAINS: tuple[str, ...] = (
@@ -75,6 +98,8 @@ SUPPORTED_TRACKED_DOMAINS: tuple[str, ...] = (
 SERVICE_RESET_STATS = "reset_stats"
 
 REGISTRY_REBUILD_DEBOUNCE_SECONDS = 2
+FLAP_WINDOW_SECONDS = 300
+FLAP_THRESHOLD = 3
 MINIMUM_HOME_ASSISTANT_VERSION = "2026.4.0"
 UNKNOWN_INTEGRATION = "unknown"
 MAX_EXPOSED_OFFLINE_DEVICES = 200
@@ -88,10 +113,19 @@ SENSOR_UNAVAILABLE_DEVICES_LIST = "unavailable_devices_list"
 SENSOR_UNAVAILABLE_BY_INTEGRATION = "unavailable_by_integration"
 SENSOR_CRITICAL_OFFLINE_DEVICES = "critical_offline_devices"
 SENSOR_LOW_BATTERY_DEVICES_LIST = "low_battery_devices_list"
+SENSOR_DEGRADED_DEVICES_LIST = "degraded_devices_list"
+SENSOR_FLAPPING_DEVICES_LIST = "flapping_devices_list"
 
 SUPPORTED_SENSORS: tuple[str, ...] = (
     SENSOR_UNAVAILABLE_DEVICES_LIST,
     SENSOR_UNAVAILABLE_BY_INTEGRATION,
     SENSOR_CRITICAL_OFFLINE_DEVICES,
     SENSOR_LOW_BATTERY_DEVICES_LIST,
+    SENSOR_DEGRADED_DEVICES_LIST,
+    SENSOR_FLAPPING_DEVICES_LIST,
 )
+
+
+def get_storage_key(entry_id: str) -> str:
+    """Return the storage key for a config entry."""
+    return f"{DOMAIN}.{entry_id}.runtime"

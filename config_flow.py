@@ -17,6 +17,7 @@ from .const import (
     CONF_EXCLUDE_DOMAINS,
     CONF_EXCLUDE_ENTITIES,
     CONF_EXCLUDE_INTEGRATIONS,
+    CONF_OFFLINE_STRATEGY,
     CONF_LOW_BATTERY_THRESHOLD,
     CONF_TRACKED_DOMAINS,
     CONF_TREAT_BATTERY_UNAVAILABLE_UNKNOWN_AS_LOW,
@@ -25,6 +26,7 @@ from .const import (
     CONF_WARNING_THRESHOLD,
     DEFAULT_CLEANUP_ORPHAN_AFTER_HOURS,
     DEFAULT_CRITICAL_THRESHOLD,
+    DEFAULT_OFFLINE_STRATEGY,
     DEFAULT_LOW_BATTERY_THRESHOLD,
     DEFAULT_TRACKED_DOMAINS,
     DEFAULT_TREAT_BATTERY_UNAVAILABLE_UNKNOWN_AS_LOW,
@@ -33,6 +35,7 @@ from .const import (
     DEFAULT_WARNING_THRESHOLD,
     DOMAIN,
     get_display_name,
+    OFFLINE_STRATEGIES,
     SUPPORTED_TRACKED_DOMAINS,
 )
 
@@ -42,6 +45,7 @@ def _default_config() -> dict[str, Any]:
     return {
         CONF_WARNING_THRESHOLD: DEFAULT_WARNING_THRESHOLD,
         CONF_CRITICAL_THRESHOLD: DEFAULT_CRITICAL_THRESHOLD,
+        CONF_OFFLINE_STRATEGY: DEFAULT_OFFLINE_STRATEGY,
         CONF_TREAT_UNKNOWN_AS_OFFLINE: DEFAULT_TREAT_UNKNOWN_AS_OFFLINE,
         CONF_TRACKED_DOMAINS: list(DEFAULT_TRACKED_DOMAINS),
         CONF_EXCLUDE_DEVICES: [],
@@ -82,11 +86,23 @@ def _domain_options() -> list[dict[str, str]]:
     ]
 
 
+def _offline_strategy_options(language: str | None) -> list[dict[str, str]]:
+    """Build offline strategy options with localized labels."""
+    is_zh = bool(language and language.lower().startswith("zh"))
+    labels = {
+        "any": "任意实体离线" if is_zh else "Any entity offline",
+        "core": "核心实体离线" if is_zh else "Core entities offline",
+        "quorum": "离线过半" if is_zh else "Quorum offline",
+    }
+    return [{"value": value, "label": labels[value]} for value in OFFLINE_STRATEGIES]
+
+
 def _normalize_basic_input(user_input: Mapping[str, Any]) -> dict[str, Any]:
     """Normalize the basic monitoring section."""
     return {
         CONF_WARNING_THRESHOLD: int(user_input[CONF_WARNING_THRESHOLD]),
         CONF_CRITICAL_THRESHOLD: int(user_input[CONF_CRITICAL_THRESHOLD]),
+        CONF_OFFLINE_STRATEGY: str(user_input[CONF_OFFLINE_STRATEGY]),
         CONF_TREAT_UNKNOWN_AS_OFFLINE: bool(user_input[CONF_TREAT_UNKNOWN_AS_OFFLINE]),
         CONF_TRACKED_DOMAINS: list(user_input[CONF_TRACKED_DOMAINS]),
     }
@@ -126,10 +142,20 @@ def _validate_payload(payload: Mapping[str, Any]) -> dict[str, str]:
     return errors
 
 
-def _build_basic_schema(defaults: Mapping[str, Any]) -> vol.Schema:
+def _build_basic_schema(hass, defaults: Mapping[str, Any]) -> vol.Schema:
     """Build the core monitoring schema."""
     return vol.Schema(
         {
+            vol.Required(
+                CONF_OFFLINE_STRATEGY,
+                default=defaults[CONF_OFFLINE_STRATEGY],
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=_offline_strategy_options(hass.config.language),
+                    multiple=False,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
             vol.Required(
                 CONF_TRACKED_DOMAINS,
                 default=list(defaults[CONF_TRACKED_DOMAINS]),
@@ -288,7 +314,7 @@ class DeviceAvailabilityMonitorConfigFlow(
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_build_basic_schema(self._config),
+            data_schema=_build_basic_schema(self.hass, self._config),
             errors=errors,
         )
 
@@ -351,7 +377,7 @@ class DeviceAvailabilityMonitorOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=_build_basic_schema(self._config),
+            data_schema=_build_basic_schema(self.hass, self._config),
             errors=errors,
         )
 

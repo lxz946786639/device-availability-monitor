@@ -1,203 +1,175 @@
 # 设备可用性监控（Device Availability Monitor）
 
-这是一个用于 Home Assistant 的自定义集成，中文名为“设备可用性监控”，英文名为“Device Availability Monitor”。它用来按“设备维度”统计设备可用性、离线状态和低电量状态，并提供图形化配置、分级告警和适合 Lovelace 使用的传感器输出。
+这是一个用于 Home Assistant 的自定义集成，用来按“设备维度”统计离线、亚健康和低电量状态，并提供适合 Lovelace、自动化和模板消费的诊断型传感器。
 
 当前集成信息：
 
 - 中文名：`设备可用性监控`
 - 英文名：`Device Availability Monitor`
 - 设备制造商：`noau`
-
-它重点解决的问题是：
-
-- 不是统计单个 `entity`，而是统计“设备可用性、离线与低电量状态”
-- 灯、开关、窗帘、风扇、空调、锁、传感器等设备，只要任意被监控实体变成 `unavailable`，就把整个设备视为不可用
-- 支持按集成分类统计，例如 `mqtt`、`zha`、`esphome`
-- 支持离线时长、告警分级、低电量监测、设备排除、实体排除和图形化配置
-- 提供 `zh-Hans` / `en` 国际化文案
-
-## 版本要求
-
 - 最低支持 Home Assistant：`2026.4.0`
-- 配置方式：图形化界面 `config_flow + options flow`
-- 单实例集成：是
-- 国际化：支持 `zh-Hans` 与 `en`
+- 配置方式：`config_flow + options flow`
+- 国际化：`zh-Hans` / `en`
 
-## 主要功能
+## 它解决什么问题
 
-- 按 `device` 统计不可用状态，而不是按 `entity`
-- 启动后以后台分批方式扫描当前状态，避免大规模系统在初始化时卡死
-- 监听状态变化和 registry 变化，自动更新设备离线结果
-- 记录每个设备的：
-  - `offline_since`
-  - `offline_duration`
-  - `last_recovered_at`
-- 支持 `warning` / `critical` 两级离线阈值
-- 支持低电量阈值和低电量设备清单
-- 支持排除：
-  - 设备
-  - 实体
-  - 集成
-  - domain
-- 输出 4 个传感器，适合 Lovelace 卡片、模板和自动化读取
-- 提供 `reset_stats` 服务，便于重建索引和重置统计
+- 不是统计单个 `entity`，而是统计“设备可用性”
+- 支持把 `light`、`switch`、`cover`、`fan`、`climate`、`lock` 等设备聚合成设备状态
+- 能区分 `online`、`degraded`、`offline` 三态
+- 能识别低电量设备和抖动设备
+- 支持设备、实体、集成和 domain 排除
+- 适合大规模部署，避免全量重建和事件风暴导致卡顿
 
-## 适用范围
+## 主要特性
 
-本集成优先覆盖以下实体 domain 所属设备：
+- 版本化扫描，避免旧扫描覆盖新状态
+- 扫描期间会取消旧任务，并使用新的 `_scan_version` 保证一致性
+- `state_changed` 路径保持 O(1) 增量更新
+- `pending` 队列按 `entity_id` 去重，始终保留最后状态
+- 运行时关键状态通过 Home Assistant `Store` 持久化，重启后可恢复离线起点和 flap 历史
+- Snapshot 分为 static / dynamic 两层，避免每次事件都全量 rebuild
+- 离线判定支持 `any` / `core` / `quorum`
+- 默认离线策略为 `core`
+- 亚健康判定包含：
+  - 低电量
+  - 非核心实体异常
+  - flap 抖动
+- flap 采用滚动窗口统计，默认 300 秒内达到 3 次即可认为抖动
 
-- `light`
-- `switch`
-- `cover`
-- `fan`
-- `climate`
-- `lock`
-- `sensor`
-- `binary_sensor`
-- `select`
-- `number`
-- `media_player`
-- `humidifier`
-- `water_heater`
-- `vacuum`
+## 设备状态模型
 
-默认首次启用时，为了降低大规模系统的启动内存压力，优先监控的是：
+设备健康状态优先级如下：
 
-- `light`
-- `switch`
-- `cover`
-- `fan`
-- `climate`
-- `lock`
-- `media_player`
-- `humidifier`
-- `water_heater`
-- `vacuum`
-
-如果需要，也可以在图形化配置中再手动开启 `sensor`、`binary_sensor`、`select`、`number` 等其它 domain。
-
-核心边界：
-
-- 只统计已经绑定到 `device_registry` 的设备
-- 没有 `device_id` 的实体不会进入设备离线统计
-- 统计结果是“Home Assistant 设备模型里的设备离线情况”，不是所有 entity 的不可用总表
-
-## 目录结构
-
-```text
-custom_components/
-  device_availability_monitor/
-    __init__.py
-    manifest.json
-    const.py
-    config_flow.py
-    coordinator.py
-    sensor.py
-    services.yaml
-    translations/
-      en.json
-      zh-Hans.json
-```
-
-## 安装方式
-
-### 手动安装
-
-1. 将 `custom_components/device_availability_monitor` 复制到 Home Assistant 配置目录下的 `custom_components/`
-2. 重启 Home Assistant
-3. 进入“设置 -> 设备与服务”
-4. 点击“添加集成”
-5. 搜索 `设备可用性监控`
-6. 按界面提示完成初始化
-
-### HACS
-
-当前仓库还没有加入 HACS 所需的清单文件。
-
-如果后续要发布到 HACS，建议再补充：
-
-- `hacs.json`
-- 发布说明
-- 版本标签
-
-## 图形化配置
-
-首次添加时可配置：
-
-- 第 1 步：基础监控设置
-- `tracked_domains`
-- `warning_threshold`
-- `critical_threshold`
-- `treat_unknown_as_offline`
-- 第 2 步：排除项
-- `exclude_domains`
-- `exclude_integrations`
-- `exclude_devices`
-- `exclude_entities`
-- 第 3 步：高级设置
-- `ui_refresh_interval`
-- `cleanup_orphan_after_hours`
-- `low_battery_threshold`
-- `treat_battery_unavailable_unknown_as_low`
-
-在“配置选项”中可继续调整：
-
-- 第 1 步：基础监控设置
-- `tracked_domains`
-- `warning_threshold`
-- `critical_threshold`
-- `treat_unknown_as_offline`
-- 第 2 步：排除项
-- `exclude_domains`
-- `exclude_integrations`
-- `exclude_devices`
-- `exclude_entities`
-- 第 3 步：高级设置
-- `ui_refresh_interval`
-- `cleanup_orphan_after_hours`
-- `low_battery_threshold`
-- `treat_battery_unavailable_unknown_as_low`
+1. `offline`
+2. `degraded`
+3. `online`
 
 说明：
 
-- 中文界面文案来自 `translations/zh-Hans.json`
-- 英文界面文案来自 `translations/en.json`
-- Home Assistant 最终显示哪种语言，取决于前端当前语言设置
-- 排除设备通过 `DeviceSelector` 选择
-- 排除实体通过 `EntitySelector` 选择
-- 集成和 domain 通过多选项配置
-- 低电量阈值默认 `20%`
-- 电量实体不可用或未知时，默认按 `0%` 处理并计入低电量；可在 UI 中关闭
-- 不依赖 `configuration.yaml`
-- 已提供完整国际化，不再复用同一套文案覆盖所有语言
+- 只要满足离线策略，设备就进入 `offline`
+- 如果未离线，但满足亚健康条件，就进入 `degraded`
+- 其它情况为 `online`
 
-## 默认行为
+## 配置项
 
-- 设备下任意一个被监控实体状态为 `unavailable`，设备视为离线
-- 默认不会将 `unknown` 视为离线，可在 UI 中手动开启
-- 首次启动全量扫描时，不会无条件跳过 `unknown`；是否计入离线由 `treat_unknown_as_offline` 决定
-- 低电量监测默认将电量实体的 `unavailable` / `unknown` 视为 `0%`
-- 可在 UI 中关闭“把不可用/未知电量视为低电量”
-- 只有当设备下所有被监控实体都恢复正常，设备才恢复在线
-- 离线起点 `offline_since` 会优先采用实体当前状态的 `last_changed`，设备级在同一轮离线会话里只会前移，不会因为部分实体恢复而后移
-- 离线时长通过本地定时刷新更新，不访问远程设备
-- 为避免状态属性过大，详细离线设备列表会做数量截断，并在 attributes 中标记是否被截断
-- 首次状态扫描改为后台分批执行，运行期更新尽量采用事件驱动
-- 低电量监测复用同一套后台分批扫描，不会额外引入同步全量遍历
-- 4 个摘要传感器的 `state` 都是数值，详细列表和分类统计放在 attributes 中
-- 这 4 个摘要传感器都被标记为诊断类实体
-- 传感器名称通过本地化翻译提供，不再在代码里硬编码中文
+首次添加和后续 options flow 都分为 3 步：
 
-## 传感器输出
+1. 基础监控设置
+2. 排除项
+3. 高级设置
 
-本集成会创建 4 个传感器。
+### 基础监控设置
 
-注意：
+- `offline_strategy`
+  - `any`：任意实体离线就算设备离线
+  - `core`：只看核心实体，默认值
+  - `quorum`：离线实体过半才算设备离线
+- `tracked_domains`
+- `warning_threshold`
+- `critical_threshold`
+- `treat_unknown_as_offline`
 
-- 实际 `entity_id` 由 Home Assistant 根据实体名称和唯一 ID 自动生成
-- 如果系统中已有重名实体，最终 `entity_id` 可能会带后缀
+### 排除项
 
-### 1. 不可用设备列表
+- `exclude_domains`
+- `exclude_integrations`
+- `exclude_devices`
+- `exclude_entities`
+
+### 高级设置
+
+- `ui_refresh_interval`
+- `cleanup_orphan_after_hours`
+- `low_battery_threshold`
+- `treat_battery_unavailable_unknown_as_low`
+
+## 扫描与并发控制
+
+实现上使用了版本化扫描模型：
+
+- `self._scan_version: int = 0`
+- `self._current_scan_task: asyncio.Task | None = None`
+
+每次启动扫描时：
+
+1. `self._scan_version += 1`
+2. 保存当前 `version`
+3. 如果已有扫描任务未完成，先 `cancel()`
+4. 使用 `hass.async_create_task(self._scan(version))`
+
+扫描循环中会在以下位置检查版本：
+
+- 每个 entity 处理前
+- 每批处理后
+- snapshot 写入前
+
+这样可以保证旧扫描不会覆盖新状态。
+
+### pending 队列限流
+
+当扫描正在进行时，状态变更不会立即重算，而是进入 pending 队列。
+
+- pending 结构按 `entity_id -> 最新事件` 去重，始终保留最后状态
+- 达到 `2000` 条时只记录调试日志，不再清空队列，也不触发全量重扫
+- 扫描结束后会按时间顺序补应用这批最新事件
+
+## Snapshot 分层
+
+当前实现把快照拆成两层：
+
+- `self._snapshot_static`
+  - `offline_devices`
+  - `degraded_devices`
+  - `low_battery_devices`
+  - `flapping_devices`
+  - `by_integration`
+  - `offline_strategy`
+  - `low_battery_threshold`
+  - `treat_battery_unavailable_unknown_as_low`
+  - flap 相关常量
+- `self._snapshot_dynamic`
+  - `offline_count`
+  - `critical_count`
+  - `warning_count`
+  - `degraded_count`
+  - `flapping_count`
+  - `low_battery_count`
+  - 各类总数与截断标记
+  - 扫描进度与更新时间
+
+发布到实体时再合并成一个 snapshot，避免每次事件都全量 rebuild。
+
+## 持久化状态
+
+coordinator 使用 Home Assistant `Store` 持久化以下运行时字段：
+
+- `offline_since`
+- `offline_entity_since`
+- `flap_history`
+- `last_recovered_at`
+
+存储 key 采用 config entry 维度隔离，不会改变现有 `entity_id`：
+
+- `device_availability_monitor.<entry_id>.runtime`
+
+恢复流程如下：
+
+1. `async_initialize()` 先从 storage 读取历史数据
+2. `_build_indexes()` 建立实体/设备索引
+3. 将持久化的 `offline_since`、`offline_entity_since`、`flap_history` 回填到设备运行态
+4. 启动扫描后再按当前实体状态修正最终结果
+
+这样可以保证：
+
+- HA 重启后不会丢失当前离线会话的起点
+- flap 统计不会因为重启被清零
+- `last_recovered_at` 能跨重启继续保留
+
+## 传感器
+
+当前集成会创建 6 个诊断型传感器。
+
+### 1. `sensor.unavailable_devices_list`
 
 用途：
 
@@ -205,7 +177,7 @@ custom_components/
 
 状态值：
 
-- 设备数量的数值，例如 `3`
+- 离线设备数量
 
 主要属性：
 
@@ -214,25 +186,13 @@ custom_components/
 - `critical_count`
 - `warning_count`
 - `devices_truncated`
+- `offline_strategy`
+- `scan_in_progress`
+- `scan_processed_entities`
+- `scan_total_entities`
 - `updated_at`
 
-`devices` 中每一项包含类似字段：
-
-```json
-{
-  "device_id": "abc123",
-  "device_name": "Living Room Light",
-  "integration": "zha",
-  "domains": ["light"],
-  "offline_since": "2026-04-30T17:00:00+08:00",
-  "offline_duration": 320,
-  "severity": "warning",
-  "offline_entities": ["light.living_room"],
-  "last_recovered_at": null
-}
-```
-
-### 2. 按集成统计不可用设备
+### 2. `sensor.unavailable_by_integration`
 
 用途：
 
@@ -240,42 +200,37 @@ custom_components/
 
 状态值：
 
-- 集成数量的数值，例如 `2`
+- 集成数量
 
 主要属性：
 
 - `by_integration`
+- `scan_in_progress`
+- `scan_processed_entities`
+- `scan_total_entities`
 - `updated_at`
 
-### 3. 严重离线设备
+### 3. `sensor.critical_offline_devices`
 
 用途：
 
-- 输出达到 `critical` 阈值的设备数量和明细
-
-筛选规则：
-
-- 设备下任意一个被监控实体变为 `unavailable` 时，设备会先进入离线集合
-- 如果已开启“将 `unknown` 视为离线”，那么 `unknown` 也会触发离线
-- `offline_since` 优先取离线实体状态自身的 `last_changed`，设备级在同一轮离线会话里只会前移，不会因为部分实体恢复而后移
-- 从 `offline_since` 开始累计离线时长
-- 当 `offline_duration >= critical_threshold` 时，该设备进入“严重离线设备”
-- 默认 `critical_threshold` 为 `600` 秒，可在图形化界面调整
+- 输出达到 critical 阈值的设备
 
 主要属性：
 
 - `devices`
+- `devices_total`
+- `devices_truncated`
+- `scan_in_progress`
+- `scan_processed_entities`
+- `scan_total_entities`
 - `updated_at`
 
-### 4. 低电量设备列表
+### 4. `sensor.low_battery_devices_list`
 
 用途：
 
-- 输出当前低电量设备明细
-
-状态值：
-
-- 低电量设备数量的数值，例如 `5`
+- 输出低电量设备明细
 
 主要属性：
 
@@ -289,28 +244,110 @@ custom_components/
 - `scan_total_entities`
 - `updated_at`
 
-`devices` 中每一项包含类似字段：
+### 5. `sensor.degraded_devices_list`
+
+用途：
+
+- 输出亚健康设备
+
+状态值：
+
+- 亚健康设备数量
+
+主要属性：
+
+- `devices`
+- `devices_total`
+- `devices_truncated`
+- `low_battery_threshold`
+- `flap_threshold`
+- `scan_in_progress`
+- `scan_processed_entities`
+- `scan_total_entities`
+- `updated_at`
+
+典型 `reasons` 包含：
+
+- `low_battery`
+- `non_core_offline`
+- `flap`
+
+### 6. `sensor.flapping_devices_list`
+
+用途：
+
+- 输出在滚动窗口内频繁抖动的设备
+
+状态值：
+
+- 抖动设备数量
+
+主要属性：
+
+- `devices`
+- `devices_total`
+- `devices_truncated`
+- `flap_window_seconds`
+- `flap_threshold`
+- `scan_in_progress`
+- `scan_processed_entities`
+- `scan_total_entities`
+- `updated_at`
+
+### 常见设备条目结构
 
 ```json
 {
   "device_id": "abc123",
-  "device_name": "Kitchen Lock",
+  "device_name": "Living Room Light",
   "integration": "zha",
-  "battery_percent": 18,
-  "battery_source_entity_id": "sensor.kitchen_lock_battery",
-  "battery_entities": ["sensor.kitchen_lock_battery"],
-  "battery_entities_total": 1,
-  "battery_entities_truncated": false
+  "health_state": "offline",
+  "offline_since": "2026-04-30T17:00:00+08:00",
+  "offline_duration": 320,
+  "severity": "warning",
+  "offline_entities": ["light.living_room"],
+  "offline_entities_total": 1,
+  "offline_entities_truncated": false,
+  "last_recovered_at": null
 }
 ```
 
-筛选规则：
+## `offline_since` 语义
 
-- 设备会先收集所有具备电量语义的实体，再取最低电量值
-- 默认低于 `20%` 的设备进入低电量列表
-- 电量实体处于 `unavailable` 或 `unknown` 时，默认按 `0%` 处理并计入低电量
-- 可以在图形化界面里关闭“把不可用/未知电量视为低电量”的选项
-- 低电量列表同样通过后台分批扫描和事件驱动更新，不会阻塞 Home Assistant 主线程
+- `offline_since` 只取“当前仍处于 offline 状态”的实体里最早的起始时间
+- 如果所有实体都恢复在线，`offline_since` 会被清空
+- `core` 模式下只看核心实体，非核心离线不会污染离线起点
+- 重启后会优先从 storage 恢复当前离线会话的起点和实体级离线时间
+
+## `degraded` 判定
+
+设备会被标记为 `degraded` 的情况：
+
+1. 低电量低于阈值
+2. 非核心实体异常离线
+3. flap 次数达到阈值
+
+说明：
+
+- `offline` 的优先级高于 `degraded`
+- 如果设备已经离线，不会再显示为 degraded
+- `flapping_devices_list` 和 `degraded_devices_list` 是两个独立视图
+
+## Flap 机制
+
+- `flap_history = deque(maxlen=20)`
+- `flap_count = int`
+- `FLAP_WINDOW_SECONDS = 300`
+- `FLAP_THRESHOLD = 3`
+
+当设备健康状态发生变化时，会调用 `_record_flap(device)`，并在窗口外自动裁剪历史。最近 20 条 flap 记录会持久化，重启后可继续统计。
+
+## 使用建议
+
+- 如果主要关注灯、开关、窗帘、空调、锁等真实设备，保持默认 `tracked_domains` 即可
+- 如果 `sensor` 类实体波动较大，建议谨慎加入 `tracked_domains`
+- 如果某个集成整体不想参与统计，可以直接放进 `exclude_integrations`
+- 如果某些电量实体经常返回 `unknown` 或 `unavailable`，可以关闭“将不可用/未知电量视为低电量”
 
 ## 服务
 
@@ -318,57 +355,33 @@ custom_components/
 
 用途：
 
-- 重建 entity/device 映射
+- 重建索引
 - 重新扫描当前状态
-- 按当前状态重建离线记录和低电量记录
+- 重新计算离线、亚健康、低电量和抖动统计
+- 同时清空持久化的离线起点、flap 历史和 `last_recovered_at`
 
-适用场景：
+适合：
 
-- 设备 registry 发生大量变化后
-- 手动调试时
+- registry 大量变化后
+- 手动调试
 - 怀疑统计结果异常时
 
-## 使用建议
+## 性能与稳定性
 
-- 如果你的目标是重点关注离线灯、开关、窗帘等设备，建议保留默认的 `tracked_domains`
-- 如果某些 `sensor` 类实体波动大、经常 `unknown`，可以：
-  - 保持 `treat_unknown_as_offline` 为关闭
-  - 或不要把 `sensor` 加入 `tracked_domains`
-  - 或直接把对应实体或设备排除
-- 如果某些电量实体经常返回 `unknown` / `unavailable`，可以在 UI 中关闭“把不可用/未知电量视为低电量”
-- 如果某个集成整体不想参与统计，例如 `mqtt`，可以直接加入 `exclude_integrations`
+当前实现满足以下目标：
 
-## 已知限制
+- `state_changed` 处理路径是 O(1)
+- 没有全局扫描，除启动与手动重建外不做全量遍历
+- 不使用同步 I/O
+- 不阻塞事件循环
+- 高频事件不会导致内存无限增长
+- pending 事件按 `entity_id` 聚合最新状态，避免重复事件堆积
+- 关键运行时字段会持久化，重启后可继续累计离线与 flap 时间
+- 旧扫描不会覆盖新扫描结果
+- 3000+ entity 的场景下尽量保持平稳
 
-- 没有 `device_id` 的实体不会被统计为“设备离线”
-- `group`、`template`、`input_*` 等逻辑实体不属于本集成的重点监控范围
-- 当前仓库只做了本地语法和资源文件校验，尚未包含完整的 Home Assistant 集成测试用例
-- 低电量监测只识别具备电量语义的实体，主要是 `battery` 设备类传感器
+## 备注
 
-## 开发与验证
-
-当前仓库已完成：
-
-- 自定义集成目录结构
-- `config_flow` 多步表单
-- `options flow` 多步表单
-- `zh-Hans` / `en` 国际化文案
-- 设备级离线聚合 coordinator
-- 4 个传感器
-- `reset_stats` 服务
-- 本地 Python 语法编译检查
-- `manifest.json` / `translations/en.json` / `translations/zh-Hans.json` JSON 解析检查
-
-建议在真实 Home Assistant `2026.4.0` 环境中进一步验证：
-
-- 集成添加流程
-- options flow 更新后自动 reload
-- 设备排除和实体排除是否符合预期
-- registry 变更后的重建行为
-- Lovelace 展示和模板访问体验
-
-## 许可证
-
-当前仓库尚未附带许可证文件。
-
-如果项目计划公开发布，建议补充一个明确的 `LICENSE` 文件。
+- 具体 UI 文案来自 `translations/en.json` 和 `translations/zh-Hans.json`
+- 实际最终显示取决于 Home Assistant 前端语言
+- 当前仓库已完成本地语法和资源文件校验，仍建议在真实 Home Assistant 环境中做一次联调验证

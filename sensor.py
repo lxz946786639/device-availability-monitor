@@ -17,7 +17,9 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     NAME,
+    SENSOR_DEGRADED_DEVICES_LIST,
     SENSOR_CRITICAL_OFFLINE_DEVICES,
+    SENSOR_FLAPPING_DEVICES_LIST,
     SENSOR_LOW_BATTERY_DEVICES_LIST,
     SENSOR_UNAVAILABLE_BY_INTEGRATION,
     SENSOR_UNAVAILABLE_DEVICES_LIST,
@@ -54,6 +56,18 @@ SENSOR_DESCRIPTIONS: tuple[MonitorSensorDescription, ...] = (
         name=None,
         translation_key=SENSOR_LOW_BATTERY_DEVICES_LIST,
         icon="mdi:battery-alert",
+    ),
+    MonitorSensorDescription(
+        key=SENSOR_DEGRADED_DEVICES_LIST,
+        name=None,
+        translation_key=SENSOR_DEGRADED_DEVICES_LIST,
+        icon="mdi:shield-alert",
+    ),
+    MonitorSensorDescription(
+        key=SENSOR_FLAPPING_DEVICES_LIST,
+        name=None,
+        translation_key=SENSOR_FLAPPING_DEVICES_LIST,
+        icon="mdi:swap-horizontal",
     ),
 )
 
@@ -113,6 +127,10 @@ class DeviceAvailabilityMonitorSensor(
             return int(snapshot.get("critical_count", 0))
         if key == SENSOR_LOW_BATTERY_DEVICES_LIST:
             return int(snapshot.get("low_battery_count", 0))
+        if key == SENSOR_DEGRADED_DEVICES_LIST:
+            return int(snapshot.get("degraded_count", 0))
+        if key == SENSOR_FLAPPING_DEVICES_LIST:
+            return int(snapshot.get("flapping_count", 0))
 
         return 0
 
@@ -129,6 +147,7 @@ class DeviceAvailabilityMonitorSensor(
                 "critical_count": snapshot.get("critical_count", 0),
                 "warning_count": snapshot.get("warning_count", 0),
                 "devices_truncated": snapshot.get("offline_devices_truncated", False),
+                "offline_strategy": snapshot.get("offline_strategy", "core"),
                 "scan_in_progress": snapshot.get("scan_in_progress", False),
                 "scan_processed_entities": snapshot.get("scan_processed_entities", 0),
                 "scan_total_entities": snapshot.get("scan_total_entities", 0),
@@ -155,6 +174,32 @@ class DeviceAvailabilityMonitorSensor(
                 "treat_battery_unavailable_unknown_as_low": snapshot.get(
                     "treat_battery_unavailable_unknown_as_low", True
                 ),
+                "scan_in_progress": snapshot.get("scan_in_progress", False),
+                "scan_processed_entities": snapshot.get("scan_processed_entities", 0),
+                "scan_total_entities": snapshot.get("scan_total_entities", 0),
+                "updated_at": snapshot.get("updated_at"),
+            }
+
+        if key == SENSOR_DEGRADED_DEVICES_LIST:
+            return {
+                "devices": snapshot.get("degraded_devices", []),
+                "devices_total": snapshot.get("degraded_devices_total", 0),
+                "devices_truncated": snapshot.get("degraded_devices_truncated", False),
+                "low_battery_threshold": snapshot.get("low_battery_threshold", 20),
+                "flap_threshold": snapshot.get("flap_threshold", 3),
+                "scan_in_progress": snapshot.get("scan_in_progress", False),
+                "scan_processed_entities": snapshot.get("scan_processed_entities", 0),
+                "scan_total_entities": snapshot.get("scan_total_entities", 0),
+                "updated_at": snapshot.get("updated_at"),
+            }
+
+        if key == SENSOR_FLAPPING_DEVICES_LIST:
+            return {
+                "devices": snapshot.get("flapping_devices", []),
+                "devices_total": snapshot.get("flapping_devices_total", 0),
+                "devices_truncated": snapshot.get("flapping_devices_truncated", False),
+                "flap_window_seconds": snapshot.get("flap_window_seconds", 300),
+                "flap_threshold": snapshot.get("flap_threshold", 3),
                 "scan_in_progress": snapshot.get("scan_in_progress", False),
                 "scan_processed_entities": snapshot.get("scan_processed_entities", 0),
                 "scan_total_entities": snapshot.get("scan_total_entities", 0),

@@ -6,12 +6,14 @@
         "title": "基础监控设置",
         "description": "第 1 步，共 3 步。先确定要监控的设备范围，以及离线告警升级规则。",
         "data": {
+          "offline_strategy": "离线策略",
           "tracked_domains": "监控的实体域",
           "warning_threshold": "告警阈值",
           "critical_threshold": "严重阈值",
           "treat_unknown_as_offline": "将 unknown 视为离线"
         },
         "data_description": {
+          "offline_strategy": "决定设备离线判定的方式。核心模式只统计核心设备域，可减少误判。",
           "tracked_domains": "建议优先保留灯、开关、窗帘等设备域；大规模系统首次使用时，不建议一开始就全选 sensor 类域。",
           "warning_threshold": "设备连续离线达到该秒数后，标记为 warning。",
           "critical_threshold": "设备连续离线达到该秒数后，升级为 critical；必须大于或等于告警阈值。",
@@ -65,12 +67,14 @@
         "title": "基础监控设置",
         "description": "第 1 步，共 3 步。先调整监控范围和离线判定规则。",
         "data": {
+          "offline_strategy": "离线策略",
           "tracked_domains": "监控的实体域",
           "warning_threshold": "告警阈值",
           "critical_threshold": "严重阈值",
           "treat_unknown_as_offline": "将 unknown 视为离线"
         },
         "data_description": {
+          "offline_strategy": "决定设备离线判定的方式。核心模式只统计核心设备域，可减少误判。",
           "tracked_domains": "这里决定哪些实体域会参与设备离线统计；选得越多，首次扫描压力越大。",
           "warning_threshold": "设备连续离线达到该秒数后，标记为 warning。",
           "critical_threshold": "设备连续离线达到该秒数后，升级为 critical；必须大于或等于告警阈值。",
@@ -134,6 +138,12 @@
       },
       "low_battery_devices_list": {
         "name": "低电量设备列表"
+      },
+      "degraded_devices_list": {
+        "name": "亚健康设备列表"
+      },
+      "flapping_devices_list": {
+        "name": "抖动设备列表"
       }
     }
   }
