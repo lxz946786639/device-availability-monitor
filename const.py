@@ -17,7 +17,7 @@ def get_display_name(language: str | None) -> str:
         return DISPLAY_NAME_ZH_HANS
     return NAME
 
-PLATFORMS: tuple[Platform, ...] = (Platform.SENSOR,)
+PLATFORMS: tuple[Platform, ...] = (Platform.SENSOR, Platform.BUTTON)
 
 CONF_WARNING_THRESHOLD = "warning_threshold"
 CONF_CRITICAL_THRESHOLD = "critical_threshold"
@@ -115,6 +115,7 @@ SENSOR_CRITICAL_OFFLINE_DEVICES = "critical_offline_devices"
 SENSOR_LOW_BATTERY_DEVICES_LIST = "low_battery_devices_list"
 SENSOR_DEGRADED_DEVICES_LIST = "degraded_devices_list"
 SENSOR_FLAPPING_DEVICES_LIST = "flapping_devices_list"
+BUTTON_RESET_DEVICE_STATS = "reset_device_stats"
 
 SUPPORTED_SENSORS: tuple[str, ...] = (
     SENSOR_UNAVAILABLE_DEVICES_LIST,
@@ -123,6 +124,10 @@ SUPPORTED_SENSORS: tuple[str, ...] = (
     SENSOR_LOW_BATTERY_DEVICES_LIST,
     SENSOR_DEGRADED_DEVICES_LIST,
     SENSOR_FLAPPING_DEVICES_LIST,
+)
+
+SUPPORTED_BUTTONS: tuple[str, ...] = (
+    BUTTON_RESET_DEVICE_STATS,
 )
 
 

@@ -126,6 +126,11 @@
       }
     },
   "entity": {
+    "button": {
+      "reset_device_stats": {
+        "name": "重建设备统计"
+      }
+    },
     "sensor": {
       "unavailable_devices_list": {
         "name": "不可用设备列表"

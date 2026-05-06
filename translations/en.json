@@ -126,6 +126,11 @@
       }
     },
   "entity": {
+    "button": {
+      "reset_device_stats": {
+        "name": "Reset Device Stats"
+      }
+    },
     "sensor": {
       "unavailable_devices_list": {
         "name": "Unavailable devices list"

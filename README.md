@@ -7,6 +7,8 @@
 - 中文名：`设备可用性监控`
 - 英文名：`Device Availability Monitor`
 - 设备制造商：`noau`
+- 集成图标：`brand/icon.png`
+- 集成 logo：`brand/logo.png`
 - 最低支持 Home Assistant：`2026.4.0`
 - 配置方式：`config_flow + options flow`
 - 国际化：`zh-Hans` / `en`
@@ -82,6 +84,27 @@
 - `cleanup_orphan_after_hours`
 - `low_battery_threshold`
 - `treat_battery_unavailable_unknown_as_low`
+
+## 安装与 HACS
+
+### 直接安装
+
+把整个 `custom_components/device_availability_monitor/` 目录复制到 Home Assistant 的 `custom_components/` 下，然后重启 Home Assistant。
+
+### 通过 HACS 安装
+
+1. 在 HACS 中添加本仓库为自定义仓库，类别选择 `Integration`
+2. 安装 `device_availability_monitor`
+3. 重启 Home Assistant
+4. 到“设置 -> 设备与服务”中添加该集成
+
+仓库根目录已经包含：
+
+- `hacs.json`
+- `logo.png`
+- `.github/release_notes_template.md`
+
+这些文件能让 HACS 仓库卡片、发布说明和安装体验更完整。
 
 ## 扫描与并发控制
 
@@ -366,6 +389,19 @@ coordinator 使用 Home Assistant `Store` 持久化以下运行时字段：
 - 手动调试
 - 怀疑统计结果异常时
 
+## 图形化控制入口
+
+当前集成额外提供一个诊断型按钮：
+
+- `button.reset_device_stats`
+  - 显示名称：`Reset Device Stats`
+  - 中文名称：`重建设备统计`
+  - 图标：`mdi:refresh`
+  - 点击后会通过 `device_availability_monitor.reset_stats` 服务触发一次全量重建
+  - 日志会提示当前是否正在扫描，并说明该操作会打断当前扫描
+
+这个按钮适合在 Lovelace 仪表盘里放一个显式维护入口，避免用户去服务面板手动调用。
+
 ## 性能与稳定性
 
 当前实现满足以下目标：
@@ -383,5 +419,7 @@ coordinator 使用 Home Assistant `Store` 持久化以下运行时字段：
 ## 备注
 
 - 具体 UI 文案来自 `translations/en.json` 和 `translations/zh-Hans.json`
+- HACS 配置位于仓库根目录 `hacs.json`
+- 发布说明模板位于 `.github/release_notes_template.md`
 - 实际最终显示取决于 Home Assistant 前端语言
 - 当前仓库已完成本地语法和资源文件校验，仍建议在真实 Home Assistant 环境中做一次联调验证
