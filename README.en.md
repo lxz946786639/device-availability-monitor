@@ -180,6 +180,9 @@ action:
 - A full scan runs when the integration first loads.
 - `state_changed` events are handled incrementally to avoid scanning all entities on every update.
 - Updates that arrive during a scan are queued and the latest state for each entity is kept.
+- The previous complete statistics are persisted and restored first during startup or registry rebuild scans.
+- Scan progress is exposed through `scan_in_progress`, `scan_processed_entities`, and `scan_total_entities`.
+- Public statistics are replaced only after a scan completes, avoiding transient zero counts during startup or registry update storms.
 - Scan versions prevent older scans from overwriting newer results.
 - Runtime data is persisted with Home Assistant `Store`.
 - After restart, the integration restores `offline_since`, `offline_entity_since`, `flap_history`, and `last_recovered_at`.
@@ -197,6 +200,12 @@ action:
 - Make sure the integration has been added from `Settings -> Devices & services`
 - Make sure your Home Assistant version is `2026.4.0` or later
 - Try calling `device_availability_monitor.reset_stats`
+
+### Sensors have no fresh value during startup
+
+- On first install or after statistics are reset, there is no previous complete snapshot, so sensors may temporarily have no value until the first scan finishes.
+- On normal restart or registry rebuild, the integration restores and keeps the previous complete statistics visible, then updates them after the scan finishes.
+- Check `scan_in_progress`, `scan_processed_entities`, and `scan_total_entities` in sensor attributes to see whether a scan is still running.
 
 ### Too many devices are reported offline
 

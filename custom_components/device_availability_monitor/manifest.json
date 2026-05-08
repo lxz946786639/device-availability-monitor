@@ -1,7 +1,7 @@
 {
   "domain": "device_availability_monitor",
   "name": "Device Availability Monitor",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "documentation": "https://github.com/lxz946786639/Device-Availability-Monitor-HA-Integration",
   "issue_tracker": "https://github.com/lxz946786639/Device-Availability-Monitor-HA-Integration/issues",
   "codeowners": ["@lxz946786639"],

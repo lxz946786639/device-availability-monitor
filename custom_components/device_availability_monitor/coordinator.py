@@ -181,7 +181,7 @@ def _is_core_domain(domain: str) -> bool:
     return domain in CORE_OFFLINE_DOMAINS
 
 
-class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any] | None]):
     """Track unavailable devices and publish snapshot data."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -260,6 +260,7 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
             "scan_total_entities": 0,
             "updated_at": None,
         }
+        self._has_complete_snapshot = False
 
     async def async_initialize(self) -> None:
         """Initialize indexes, snapshot data, and listeners."""
@@ -315,6 +316,8 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
         else:
             self.last_recovered_at = {}
 
+        self._restore_persisted_snapshot(stored.get("last_snapshot"))
+
     def _build_storage_data(self) -> dict[str, Any]:
         """Build the storage payload for the current runtime state."""
         devices: dict[str, dict[str, Any]] = {}
@@ -344,10 +347,111 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
             if value is not None
         }
 
-        return {
+        payload: dict[str, Any] = {
             "devices": devices,
             "last_recovered_at": recovered_at,
         }
+        last_snapshot = self._build_persisted_snapshot()
+        if last_snapshot is not None:
+            payload["last_snapshot"] = last_snapshot
+        return payload
+
+    def _build_persisted_snapshot(self) -> dict[str, Any] | None:
+        """Build the last complete public snapshot for startup restoration."""
+        if not self._has_complete_snapshot:
+            return None
+
+        return {
+            "offline_devices": [dict(item) for item in self._offline_devices],
+            "critical_devices": [dict(item) for item in self._critical_devices],
+            "degraded_devices": [dict(item) for item in self._degraded_devices],
+            "low_battery_devices": [dict(item) for item in self._low_battery_devices],
+            "flapping_devices": [dict(item) for item in self._flapping_devices],
+            "by_integration": dict(self._by_integration),
+            "offline_warning_count": self._offline_warning_count,
+            "updated_at": self._snapshot_dynamic.get("updated_at"),
+        }
+
+    def _restore_persisted_snapshot(self, snapshot: Any) -> None:
+        """Restore the last complete public snapshot from storage."""
+        if not isinstance(snapshot, dict):
+            return
+
+        self._restore_snapshot_bucket(
+            self._offline_devices,
+            self._offline_device_index,
+            snapshot.get("offline_devices"),
+        )
+        self._restore_snapshot_bucket(
+            self._critical_devices,
+            self._critical_device_index,
+            snapshot.get("critical_devices"),
+        )
+        self._restore_snapshot_bucket(
+            self._degraded_devices,
+            self._degraded_device_index,
+            snapshot.get("degraded_devices"),
+        )
+        self._restore_snapshot_bucket(
+            self._low_battery_devices,
+            self._low_battery_device_index,
+            snapshot.get("low_battery_devices"),
+        )
+        self._restore_snapshot_bucket(
+            self._flapping_devices,
+            self._flapping_device_index,
+            snapshot.get("flapping_devices"),
+        )
+
+        self._by_integration.clear()
+        by_integration = snapshot.get("by_integration")
+        if isinstance(by_integration, dict):
+            for integration, count in by_integration.items():
+                if not isinstance(integration, str):
+                    continue
+                try:
+                    count_int = int(count)
+                except (TypeError, ValueError):
+                    continue
+                if count_int > 0:
+                    self._by_integration[integration] = count_int
+
+        warning_count = snapshot.get("offline_warning_count")
+        try:
+            self._offline_warning_count = int(warning_count)
+        except (TypeError, ValueError):
+            self._offline_warning_count = sum(
+                1
+                for device in self._offline_devices
+                if device.get("severity") == SEVERITY_WARNING
+            )
+
+        updated_at = snapshot.get("updated_at")
+        if isinstance(updated_at, str):
+            self._snapshot_dynamic["updated_at"] = updated_at
+
+        self._has_complete_snapshot = True
+
+    @staticmethod
+    def _restore_snapshot_bucket(
+        bucket: list[dict[str, Any]],
+        index: dict[str, int],
+        raw_items: Any,
+    ) -> None:
+        """Restore one persisted snapshot bucket and its index."""
+        bucket.clear()
+        index.clear()
+        if not isinstance(raw_items, list):
+            return
+
+        for raw_item in raw_items:
+            if not isinstance(raw_item, dict):
+                continue
+            device_id = raw_item.get("device_id")
+            if not isinstance(device_id, str) or device_id in index:
+                continue
+            index[device_id] = len(bucket)
+            bucket.append(dict(raw_item))
 
     def _request_storage_save(self) -> None:
         """Schedule a debounced storage write."""
@@ -475,6 +579,8 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
         with suppress(Exception):
             await self._store.async_remove()
         self._reset_snapshot_state()
+        self._has_complete_snapshot = False
+        self.async_set_updated_data(None)
         await self._async_rebuild_indexes(preserve_existing=False)
 
     async def _async_rebuild_indexes(self, preserve_existing: bool) -> None:
@@ -515,8 +621,11 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
         self._scan_in_progress = True
         self._scan_processed_entities = 0
         self._pending_entity_refreshes.clear()
-        self._reset_snapshot_state()
-        self._publish_snapshot(dt_util.utcnow())
+        # Keep the last complete snapshot visible while the new scan builds a
+        # fresh device-state model. This avoids publishing transient zero counts
+        # during startup or registry rebuild storms.
+        if self._has_complete_snapshot:
+            self._publish_snapshot(dt_util.utcnow())
 
         if (
             self._current_scan_task is not None
@@ -673,11 +782,13 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
                         entity_id,
                         scan_started_at,
                         record_flap=False,
+                        sync_snapshot=False,
                     )
                     processed += 1
 
                 self._scan_processed_entities = processed
-                self._publish_snapshot(dt_util.utcnow())
+                if self._has_complete_snapshot:
+                    self._publish_snapshot(dt_util.utcnow())
                 await asyncio.sleep(0)
                 if version != self._scan_version:
                     return
@@ -696,11 +807,15 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
                     changed_at,
                     record_flap=True,
                     state=state,
+                    sync_snapshot=False,
                 )
 
             self._cleanup_orphan_metadata(finished_at)
             self._scan_processed_entities = self._scan_total_entities
             self._scan_in_progress = False
+            self._rebuild_visible_buckets_from_device_states(finished_at)
+            self._has_complete_snapshot = True
+            self._request_storage_save()
             self._update_refresh_timer()
             if version != self._scan_version:
                 return
@@ -940,6 +1055,7 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
         *,
         record_flap: bool,
         state: Any | None = None,
+        sync_snapshot: bool = True,
     ) -> bool:
         """Apply the current state-machine value for a tracked entity."""
         monitored_entity = self.entity_index.get(entity_id)
@@ -991,7 +1107,18 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
             )
 
         if changed:
-            self._apply_device_snapshot(device_state, changed_at, record_flap=record_flap)
+            if sync_snapshot:
+                self._apply_device_snapshot(
+                    device_state,
+                    changed_at,
+                    record_flap=record_flap,
+                )
+            else:
+                self._update_device_health(
+                    device_state,
+                    changed_at,
+                    record_flap=record_flap,
+                )
             self._request_storage_save()
         return changed
 
@@ -1207,6 +1334,25 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
         record_flap: bool,
     ) -> None:
         """Sync a single device into the exposed snapshot buckets."""
+        self._update_device_health(
+            device_state,
+            changed_at,
+            record_flap=record_flap,
+        )
+
+        self._sync_offline_bucket(device_state, changed_at)
+        self._sync_degraded_bucket(device_state, changed_at)
+        self._sync_low_battery_bucket(device_state)
+        self._sync_flapping_bucket(device_state, changed_at)
+
+    def _update_device_health(
+        self,
+        device_state: DeviceState,
+        changed_at: datetime,
+        *,
+        record_flap: bool,
+    ) -> None:
+        """Refresh canonical device health without touching exposed buckets."""
         previous_health = device_state.health_state
         current_health = self._evaluate_device(device_state)
 
@@ -1221,11 +1367,6 @@ class DeviceAvailabilityMonitorCoordinator(DataUpdateCoordinator[dict[str, Any]]
             device_state.health_reasons.clear()
         if previous_health == DEVICE_STATUS_OFFLINE and current_health != DEVICE_STATUS_OFFLINE:
             self.last_recovered_at[device_state.device_id] = changed_at
-
-        self._sync_offline_bucket(device_state, changed_at)
-        self._sync_degraded_bucket(device_state, changed_at)
-        self._sync_low_battery_bucket(device_state)
-        self._sync_flapping_bucket(device_state, changed_at)
 
     def _sync_offline_bucket(self, device_state: DeviceState, now: datetime) -> None:
         """Keep the offline snapshot bucket aligned with the device state."""

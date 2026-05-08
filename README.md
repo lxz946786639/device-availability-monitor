@@ -180,6 +180,9 @@ action:
 - 首次加载会进行一次全量扫描
 - `state_changed` 事件会走增量更新，避免每次都遍历全部实体
 - 扫描期间的新事件会进入 pending 队列，并保留每个实体的最后状态
+- 上一份完整统计结果会持久化保存，启动或 registry 重建扫描期间会优先保留并展示这份结果
+- 扫描进度通过 `scan_in_progress`、`scan_processed_entities` 和 `scan_total_entities` 属性展示
+- 扫描完成后才会一次性替换公开统计结果，避免启动期或 registry 更新风暴导致传感器数值反复归零
 - 扫描使用版本号控制，避免旧扫描覆盖新结果
 - 运行时数据通过 Home Assistant `Store` 持久化
 - 重启后会恢复 `offline_since`、`offline_entity_since`、`flap_history` 和 `last_recovered_at`
@@ -197,6 +200,12 @@ action:
 - 确认已经在 `设置 -> 设备与服务` 中添加集成
 - 确认 Home Assistant 版本不低于 `2026.4.0`
 - 尝试调用 `device_availability_monitor.reset_stats`
+
+### 启动时传感器暂时没有新数值
+
+- 首次安装或清空统计后没有上一份完整快照，首轮扫描完成前传感器可能暂时没有数值
+- 正常重启或 registry 重建时，集成会恢复并保留上一份完整统计结果，扫描完成后再更新为新结果
+- 可在传感器属性中查看 `scan_in_progress`、`scan_processed_entities` 和 `scan_total_entities` 判断是否仍在扫描
 
 ### 离线设备数量过多
 

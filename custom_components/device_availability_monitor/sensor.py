@@ -114,9 +114,12 @@ class DeviceAvailabilityMonitorSensor(
         )
 
     @property
-    def native_value(self) -> int:
+    def native_value(self) -> int | None:
         """Return the sensor state."""
-        snapshot = self.coordinator.data or {}
+        snapshot = self.coordinator.data
+        if snapshot is None:
+            return None
+
         key = self.entity_description.key
 
         if key == SENSOR_UNAVAILABLE_DEVICES_LIST:
@@ -137,7 +140,10 @@ class DeviceAvailabilityMonitorSensor(
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra attributes for the sensor."""
-        snapshot = self.coordinator.data or {}
+        snapshot = self.coordinator.data
+        if snapshot is None:
+            return {}
+
         key = self.entity_description.key
 
         if key == SENSOR_UNAVAILABLE_DEVICES_LIST:
