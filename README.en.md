@@ -2,13 +2,18 @@
 
 Chinese version: [README.md](README.md)
 
+## Repository Info
+
+- Repository: [https://github.com/lxz946786639/Device-Availability-Monitor-HA-Integration](https://github.com/lxz946786639/Device-Availability-Monitor-HA-Integration)
+- License: GPLv3 (GNU General Public License v3.0), see [LICENSE](LICENSE)
+
 `Device Availability Monitor` is a Home Assistant integration that groups entity states by device and helps you track whether a device is `online`, `degraded`, or `offline`.
 
 ## Installation
 
 ### HACS
 
-1. Add this repository as a custom repository in HACS and choose `Integration`.
+1. Add `https://github.com/lxz946786639/Device-Availability-Monitor-HA-Integration` as a custom repository in HACS and choose `Integration`.
 2. Install `device_availability_monitor`.
 3. Restart Home Assistant.
 4. Go to `Settings -> Devices & services` and add the integration.
@@ -134,9 +139,13 @@ Before publishing a new version, update:
 - `custom_components/device_availability_monitor/manifest.json`
 - `hacs.json`
 - `README.md`
+- `README.en.md`
+
+## License
+
+This project is licensed under the GPLv3 (GNU General Public License v3.0). See [LICENSE](LICENSE) for the full license text.
 
 ## Compatibility
 
 - Home Assistant `2026.4.0` or later
 - HACS supported
-

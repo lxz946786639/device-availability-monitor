@@ -12,6 +12,11 @@
 
 English version: [README.en.md](README.en.md)
 
+## 仓库信息
+
+- 仓库地址：[https://github.com/lxz946786639/Device-Availability-Monitor-HA-Integration](https://github.com/lxz946786639/Device-Availability-Monitor-HA-Integration)
+- 开源协议：GPLv3（GNU General Public License v3.0），详见 [LICENSE](LICENSE)
+
 适用场景：
 
 - 家里设备很多，单看实体状态已经很难快速判断哪台设备出了问题
@@ -27,7 +32,7 @@ English version: [README.en.md](README.en.md)
 
 ### 方式一：HACS
 
-1. 在 HACS 中添加本仓库为自定义仓库，类别选择 `Integration`
+1. 在 HACS 中添加仓库地址 `https://github.com/lxz946786639/Device-Availability-Monitor-HA-Integration` 为自定义仓库，类别选择 `Integration`
 2. 安装 `device_availability_monitor`
 3. 重启 Home Assistant
 4. 到“设置 -> 设备与服务”中添加集成
@@ -178,6 +183,11 @@ English version: [README.en.md](README.en.md)
 - `custom_components/device_availability_monitor/manifest.json`
 - `hacs.json`
 - `README.md`
+- `README.en.md`
+
+## 开源协议
+
+本项目采用 GPLv3（GNU General Public License v3.0）开源协议发布。完整协议文本请查看 [LICENSE](LICENSE)。
 
 ## 注意事项
 
